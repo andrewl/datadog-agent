@@ -27,11 +27,11 @@ import (
 	core "github.com/DataDog/datadog-agent/pkg/collector/corechecks"
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/metrics"
+	"github.com/DataDog/datadog-agent/pkg/process/procutil"
 	"github.com/DataDog/datadog-agent/pkg/tagger"
 	"github.com/DataDog/datadog-agent/pkg/tagger/collectors"
 	cutil "github.com/DataDog/datadog-agent/pkg/util/containerd"
 	ddContainers "github.com/DataDog/datadog-agent/pkg/util/containers"
-	cgroup "github.com/DataDog/datadog-agent/pkg/util/containers/providers/cgroup"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"github.com/DataDog/datadog-agent/pkg/util/system"
 )
@@ -248,16 +248,22 @@ func computeMetrics(sender aggregator.Sender, cu cutil.ContainerdItf, fil *ddCon
 			log.Tracef("Could not retrieve pids from task %s: %s", ctn.ID()[:12], errTask.Error())
 			continue
 		}
-		fileDescCount := 0
-		for _, p := range processes {
-			pid := p.Pid
-			fdCount, err := cgroup.GetFileDescriptorLen(int(pid))
-			if err != nil {
-				log.Debugf("Failed to get file desc length for pid %d, container %s: %s", pid, ctn.ID()[:12], err)
-				continue
-			}
-			fileDescCount += fdCount
+
+		var pids []int32
+		for _, proc := range processes {
+			pids = append(pids, int32(proc.Pid))
 		}
+
+		statsForPIDs, err := procutil.NewProcessProbe().StatsForPIDs(pids, time.Now())
+		if err != nil {
+			log.Debugf("Failed to get stats for processes: %s", err)
+		}
+
+		var fileDescCount int32
+		for _, stats := range statsForPIDs {
+			fileDescCount += stats.OpenFdCount
+		}
+
 		sender.Gauge("containerd.proc.open_fds", float64(fileDescCount), "", tags)
 	}
 }
