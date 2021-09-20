@@ -30,15 +30,19 @@ import (
 
 var (
 	checkArgs = struct {
-		framework string
-		file      string
-		verbose   bool
+		framework     string
+		file          string
+		regoInput     string
+		dumpRegoInput string
+		verbose       bool
 	}{}
 )
 
 func setupCheckCmd(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&checkArgs.framework, "framework", "", "", "Framework to run the checks from")
 	cmd.Flags().StringVarP(&checkArgs.file, "file", "f", "", "Compliance suite file to read rules from")
+	cmd.Flags().StringVarP(&checkArgs.regoInput, "rego-input", "r", "", "Rego input to use when running rego checks")
+	cmd.Flags().StringVarP(&checkArgs.dumpRegoInput, "dump-rego-input", "", "", "Path to file where to dump the Rego input JSON")
 	cmd.Flags().BoolVarP(&checkArgs.verbose, "verbose", "v", false, "Include verbose details")
 }
 
@@ -124,6 +128,15 @@ func runCheck(cmd *cobra.Command, confPathArray []string, args []string) error {
 	if checkArgs.framework != "" {
 		log.Infof("Looking for rules with framework=%s", checkArgs.framework)
 		options = append(options, checks.WithMatchSuite(checks.IsFramework(checkArgs.framework)))
+	}
+
+	if checkArgs.regoInput != "" {
+		log.Infof("Running on provided rego input: path=%s", checkArgs.regoInput)
+		options = append(options, checks.WithRegoInput(checkArgs.regoInput))
+	}
+
+	if checkArgs.dumpRegoInput != "" {
+		options = append(options, checks.WithRegoInputDumpPath(checkArgs.dumpRegoInput))
 	}
 
 	if checkArgs.file != "" {
