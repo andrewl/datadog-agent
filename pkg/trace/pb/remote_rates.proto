@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package pb;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+message Rate {
+    string service = 1; 
+    string env = 2;
+    double rate = 3; 
+}
+
+message RemoteRates {
+    repeated Rate rates = 1 [(gogoproto.nullable) = false];
+}

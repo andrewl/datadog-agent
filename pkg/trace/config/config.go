@@ -131,6 +131,9 @@ type AgentConfig struct {
 
 	// OTLPReceiver holds the configuration for OpenTelemetry receiver.
 	OTLPReceiver *OTLP
+
+	// EnabledRemoteRates defines if priority rates should be fetched remotely
+	EnabledRemoteRates bool
 }
 
 // Tag represents a key/value pair.
@@ -183,8 +186,9 @@ func New() *AgentConfig {
 
 		GlobalTags: make(map[string]string),
 
-		DDAgentBin:   defaultDDAgentBin,
-		OTLPReceiver: &OTLP{},
+		DDAgentBin:         defaultDDAgentBin,
+		OTLPReceiver:       &OTLP{},
+		EnabledRemoteRates: false,
 	}
 }
 

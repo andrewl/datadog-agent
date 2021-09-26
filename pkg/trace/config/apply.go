@@ -382,6 +382,11 @@ func (c *AgentConfig) applyDatadogConfig() error {
 		c.LogThrottling = false
 	}
 
+	// undocumented
+	if config.Datadog.IsSet("apm_config.enable_remote_configuration_dynamic_rates") {
+		c.EnabledRemoteRates = config.Datadog.GetBool("apm_config.enable_remote_configuration_dynamic_rates")
+	}
+
 	return nil
 }
 
