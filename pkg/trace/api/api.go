@@ -86,7 +86,7 @@ type HTTPReceiver struct {
 }
 
 // NewHTTPReceiver returns a pointer to a new HTTPReceiver
-func NewHTTPReceiver(conf *config.AgentConfig, dynConf *sampler.DynamicConfig, out chan *Payload, statsProcessor StatsProcessor, remoteStore *config.Store) *HTTPReceiver {
+func NewHTTPReceiver(conf *config.AgentConfig, dynConf *sampler.DynamicConfig, out chan *Payload, statsProcessor StatsProcessor) *HTTPReceiver {
 	rateLimiterResponse := http.StatusOK
 	if features.Has("429") {
 		rateLimiterResponse = http.StatusTooManyRequests
@@ -101,7 +101,7 @@ func NewHTTPReceiver(conf *config.AgentConfig, dynConf *sampler.DynamicConfig, o
 
 		out:            out,
 		statsProcessor: statsProcessor,
-		remoteStore:    remoteStore,
+		remoteStore:    config.NewStore(),
 		conf:           conf,
 		dynConf:        dynConf,
 		appsecHandler:  appsecHandler,
@@ -366,9 +366,6 @@ const (
 	// headderDroppedP0Spans contains the number of P0 spans dropped by the client.
 	// This value is used for metrics and could be used in the future to adjust priority rates.
 	headerDroppedP0Spans = "Datadog-Client-Dropped-P0-Spans"
-
-	// headerConfigProduct specifies which product requests a config
-	headerConfigProduct = "Datadog-Client-Config-Product"
 )
 
 func (r *HTTPReceiver) tagStats(v Version, header http.Header) *info.TagStats {
@@ -467,7 +464,6 @@ func (r *HTTPReceiver) handleConfig(w http.ResponseWriter, req *http.Request) {
 		metrics.Count("datadog.trace_agent.receiver.config", 1, tags, 1)
 	}()
 
-	product := req.Header.Get(headerConfigProduct)
 	tags = append(tags, fmt.Sprintf("product:%s", product))
 
 	// todo: version handling, quick response when no new version available
