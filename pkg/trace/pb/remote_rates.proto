@@ -4,14 +4,12 @@ package pb;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
-message Rate {
-    string service = 1; 
+message TargetTPS {
+    string service = 1;
     string env = 2;
-    double rate = 3; 
+    double value = 3;
 }
 
-// RemoteRates is a list of rates per service, env provided by remote configurations
-// to target in prioritysampler feedback loop.
-message RemoteRates {
-    repeated Rate rates = 1 [(gogoproto.nullable) = false];
+message APMSampling {
+    repeated TargetTPS target_tps = 1 [(gogoproto.nullable) = false];
 }

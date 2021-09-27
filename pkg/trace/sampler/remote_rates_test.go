@@ -28,7 +28,7 @@ func newTestRemoteRates() *RemoteRates {
 	}
 }
 
-func configGenerator(rates pb.RemoteRates) *pbgo.ConfigResponse {
+func configGenerator(rates pb.APMSampling) *pbgo.ConfigResponse {
 	raw, _ := rates.MarshalMsg(nil)
 	return &pbgo.ConfigResponse{
 		TargetFiles: []*pbgo.File{{Raw: raw}},
@@ -46,26 +46,26 @@ func TestRemoteTPSUpdate(t *testing.T) {
 
 	var testSteps = []struct {
 		name             string
-		ratesToApply     pb.RemoteRates
+		ratesToApply     pb.APMSampling
 		countServices    []ServiceSignature
 		expectedSamplers []sampler
 	}{
 		{
 			name: "first rates received",
-			ratesToApply: pb.RemoteRates{
-				Rates: []pb.Rate{
+			ratesToApply: pb.APMSampling{
+				TargetTps: []pb.TargetTPS{
 					{
 						Service: "willBeRemoved",
-						Rate:    3.2,
+						Value:   3.2,
 					},
 					{
 						Service: "willBeRemoved",
 						Env:     "env2",
-						Rate:    33,
+						Value:   33,
 					},
 					{
 						Service: "keep",
-						Rate:    1,
+						Value:   1,
 					},
 				},
 			},
@@ -127,11 +127,11 @@ func TestRemoteTPSUpdate(t *testing.T) {
 		},
 		{
 			name: "receive new remote rates, non matching samplers are trimmed",
-			ratesToApply: pb.RemoteRates{
-				Rates: []pb.Rate{
+			ratesToApply: pb.APMSampling{
+				TargetTps: []pb.TargetTPS{
 					{
 						Service: "keep",
-						Rate:    27,
+						Value:   27,
 					},
 				},
 			},
@@ -146,7 +146,7 @@ func TestRemoteTPSUpdate(t *testing.T) {
 	r := newTestRemoteRates()
 	for _, step := range testSteps {
 		t.Log(step.name)
-		if step.ratesToApply.Rates != nil {
+		if step.ratesToApply.TargetTps != nil {
 			r.loadNewConfig(configGenerator(step.ratesToApply))
 		}
 		for _, s := range step.countServices {

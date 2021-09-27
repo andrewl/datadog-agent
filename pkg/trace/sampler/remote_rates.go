@@ -1,6 +1,7 @@
 package sampler
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -22,8 +23,9 @@ type RemoteRates struct {
 	tpsTargets map[Signature]float64
 	mu         sync.RWMutex // protects concurrent access to samplers and tpsTargets
 
-	exit    chan struct{}
-	stopped chan struct{}
+	stopSubscriber context.CancelFunc
+	exit           chan struct{}
+	stopped        chan struct{}
 }
 
 func newRemoteRates(conf *config.AgentConfig) *RemoteRates {
@@ -32,34 +34,30 @@ func newRemoteRates(conf *config.AgentConfig) *RemoteRates {
 	}
 	remoteRates := &RemoteRates{
 		samplers: make(map[Signature]*Sampler),
-		exit:    make(chan struct{}),
-		stopped: make(chan struct{}),
+		exit:     make(chan struct{}),
+		stopped:  make(chan struct{}),
 	}
-	err := service.NewGRPCSubscriber(
-		pbgo.Product_APM_SAMPLING,
-		func(config *pbgo.ConfigResponse) error {
-			log.Infof("fetched config version %d from remote config management", config.DirectoryTargets.Version)
-			return remoteRates.loadNewConfig(config)
-		},
-	)
+	close, err := service.NewGRPCSubscriber(pbgo.Product_APM_SAMPLING, r.loadNewConfig)
 	if err != nil {
 		log.Errorf("Error when subscribing to remote config management %v", err)
 		return nil
 	}
+	remoteRates.stopSubscriber = close
 	return remoteRates
 }
 
 func (r *RemoteRates) loadNewConfig(config *pbgo.ConfigResponse) error {
+	log.Debugf("fetched config version %d from remote config management", config.DirectoryTargets.Version)
 	tpsTargets := make(map[Signature]float64, len(r.tpsTargets))
 	for _, targetFile := range config.TargetFiles {
-		var rates pb.RemoteRates
-		_, err := rates.UnmarshalMsg(targetFile.Raw)
+		var new pb.APMSampling
+		_, err := new.UnmarshalMsg(targetFile.Raw)
 		if err != nil {
 			return err
 		}
-		for _, rate := range rates.Rates {
-			sig := ServiceSignature{Name: rate.Service, Env: rate.Env}.Hash()
-			tpsTargets[sig] = rate.Rate
+		for _, targetTPS := range new.TargetTps {
+			sig := ServiceSignature{Name: targetTPS.Service, Env: targetTPS.Env}.Hash()
+			tpsTargets[sig] = targetTPS.Value
 		}
 	}
 	r.updateTPS(tpsTargets)
@@ -138,6 +136,7 @@ func (r *RemoteRates) AdjustScoring() {
 // Stop stops RemoteRates main loop
 func (r *RemoteRates) Stop() {
 	close(r.exit)
+	r.stopSubscriber()
 	<-r.stopped
 }
 

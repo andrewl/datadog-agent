@@ -9,8 +9,8 @@ import (
 	"github.com/tinylib/msgp/msgp"
 )
 
-func TestMarshalUnmarshalRate(t *testing.T) {
-	v := Rate{}
+func TestMarshalUnmarshalAPMSampling(t *testing.T) {
+	v := APMSampling{}
 	bts, err := v.MarshalMsg(nil)
 	if err != nil {
 		t.Fatal(err)
@@ -32,8 +32,8 @@ func TestMarshalUnmarshalRate(t *testing.T) {
 	}
 }
 
-func BenchmarkMarshalMsgRate(b *testing.B) {
-	v := Rate{}
+func BenchmarkMarshalMsgAPMSampling(b *testing.B) {
+	v := APMSampling{}
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -41,8 +41,8 @@ func BenchmarkMarshalMsgRate(b *testing.B) {
 	}
 }
 
-func BenchmarkAppendMsgRate(b *testing.B) {
-	v := Rate{}
+func BenchmarkAppendMsgAPMSampling(b *testing.B) {
+	v := APMSampling{}
 	bts := make([]byte, 0, v.Msgsize())
 	bts, _ = v.MarshalMsg(bts[0:0])
 	b.SetBytes(int64(len(bts)))
@@ -53,8 +53,8 @@ func BenchmarkAppendMsgRate(b *testing.B) {
 	}
 }
 
-func BenchmarkUnmarshalRate(b *testing.B) {
-	v := Rate{}
+func BenchmarkUnmarshalAPMSampling(b *testing.B) {
+	v := APMSampling{}
 	bts, _ := v.MarshalMsg(nil)
 	b.ReportAllocs()
 	b.SetBytes(int64(len(bts)))
@@ -67,17 +67,17 @@ func BenchmarkUnmarshalRate(b *testing.B) {
 	}
 }
 
-func TestEncodeDecodeRate(t *testing.T) {
-	v := Rate{}
+func TestEncodeDecodeAPMSampling(t *testing.T) {
+	v := APMSampling{}
 	var buf bytes.Buffer
 	msgp.Encode(&buf, &v)
 
 	m := v.Msgsize()
 	if buf.Len() > m {
-		t.Log("WARNING: TestEncodeDecodeRate Msgsize() is inaccurate")
+		t.Log("WARNING: TestEncodeDecodeAPMSampling Msgsize() is inaccurate")
 	}
 
-	vn := Rate{}
+	vn := APMSampling{}
 	err := msgp.Decode(&buf, &vn)
 	if err != nil {
 		t.Error(err)
@@ -91,8 +91,8 @@ func TestEncodeDecodeRate(t *testing.T) {
 	}
 }
 
-func BenchmarkEncodeRate(b *testing.B) {
-	v := Rate{}
+func BenchmarkEncodeAPMSampling(b *testing.B) {
+	v := APMSampling{}
 	var buf bytes.Buffer
 	msgp.Encode(&buf, &v)
 	b.SetBytes(int64(buf.Len()))
@@ -105,8 +105,8 @@ func BenchmarkEncodeRate(b *testing.B) {
 	en.Flush()
 }
 
-func BenchmarkDecodeRate(b *testing.B) {
-	v := Rate{}
+func BenchmarkDecodeAPMSampling(b *testing.B) {
+	v := APMSampling{}
 	var buf bytes.Buffer
 	msgp.Encode(&buf, &v)
 	b.SetBytes(int64(buf.Len()))
@@ -122,8 +122,8 @@ func BenchmarkDecodeRate(b *testing.B) {
 	}
 }
 
-func TestMarshalUnmarshalRemoteRates(t *testing.T) {
-	v := RemoteRates{}
+func TestMarshalUnmarshalTargetTPS(t *testing.T) {
+	v := TargetTPS{}
 	bts, err := v.MarshalMsg(nil)
 	if err != nil {
 		t.Fatal(err)
@@ -145,8 +145,8 @@ func TestMarshalUnmarshalRemoteRates(t *testing.T) {
 	}
 }
 
-func BenchmarkMarshalMsgRemoteRates(b *testing.B) {
-	v := RemoteRates{}
+func BenchmarkMarshalMsgTargetTPS(b *testing.B) {
+	v := TargetTPS{}
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -154,8 +154,8 @@ func BenchmarkMarshalMsgRemoteRates(b *testing.B) {
 	}
 }
 
-func BenchmarkAppendMsgRemoteRates(b *testing.B) {
-	v := RemoteRates{}
+func BenchmarkAppendMsgTargetTPS(b *testing.B) {
+	v := TargetTPS{}
 	bts := make([]byte, 0, v.Msgsize())
 	bts, _ = v.MarshalMsg(bts[0:0])
 	b.SetBytes(int64(len(bts)))
@@ -166,8 +166,8 @@ func BenchmarkAppendMsgRemoteRates(b *testing.B) {
 	}
 }
 
-func BenchmarkUnmarshalRemoteRates(b *testing.B) {
-	v := RemoteRates{}
+func BenchmarkUnmarshalTargetTPS(b *testing.B) {
+	v := TargetTPS{}
 	bts, _ := v.MarshalMsg(nil)
 	b.ReportAllocs()
 	b.SetBytes(int64(len(bts)))
@@ -180,17 +180,17 @@ func BenchmarkUnmarshalRemoteRates(b *testing.B) {
 	}
 }
 
-func TestEncodeDecodeRemoteRates(t *testing.T) {
-	v := RemoteRates{}
+func TestEncodeDecodeTargetTPS(t *testing.T) {
+	v := TargetTPS{}
 	var buf bytes.Buffer
 	msgp.Encode(&buf, &v)
 
 	m := v.Msgsize()
 	if buf.Len() > m {
-		t.Log("WARNING: TestEncodeDecodeRemoteRates Msgsize() is inaccurate")
+		t.Log("WARNING: TestEncodeDecodeTargetTPS Msgsize() is inaccurate")
 	}
 
-	vn := RemoteRates{}
+	vn := TargetTPS{}
 	err := msgp.Decode(&buf, &vn)
 	if err != nil {
 		t.Error(err)
@@ -204,8 +204,8 @@ func TestEncodeDecodeRemoteRates(t *testing.T) {
 	}
 }
 
-func BenchmarkEncodeRemoteRates(b *testing.B) {
-	v := RemoteRates{}
+func BenchmarkEncodeTargetTPS(b *testing.B) {
+	v := TargetTPS{}
 	var buf bytes.Buffer
 	msgp.Encode(&buf, &v)
 	b.SetBytes(int64(buf.Len()))
@@ -218,8 +218,8 @@ func BenchmarkEncodeRemoteRates(b *testing.B) {
 	en.Flush()
 }
 
-func BenchmarkDecodeRemoteRates(b *testing.B) {
-	v := RemoteRates{}
+func BenchmarkDecodeTargetTPS(b *testing.B) {
+	v := TargetTPS{}
 	var buf bytes.Buffer
 	msgp.Encode(&buf, &v)
 	b.SetBytes(int64(buf.Len()))
