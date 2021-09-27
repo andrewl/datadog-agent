@@ -30,14 +30,11 @@ func newRemoteRates(conf *config.AgentConfig) *RemoteRates {
 	if !conf.RemoteRates {
 		return nil
 	}
-
 	remoteRates := &RemoteRates{
 		samplers: make(map[Signature]*Sampler),
-
 		exit:    make(chan struct{}),
 		stopped: make(chan struct{}),
 	}
-
 	err := service.NewGRPCSubscriber(
 		pbgo.Product_APM_SAMPLING,
 		func(config *pbgo.ConfigResponse) error {

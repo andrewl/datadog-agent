@@ -195,10 +195,8 @@ func (s *PrioritySampler) applyRate(sampled bool, root *pb.Span, signature Signa
 	if rate, ok := getMetric(root, deprecatedRateKey); ok {
 		return rate
 	}
-	// no rates set in tracers, setting the local rate
-	// if the RemoteRates feedback loop is used for that signature
-	// use the RemoteRates feedback loop rate.
 	if s.remoteRates != nil {
+		// use a remote rate, if available
 		rate, ok := s.remoteRates.GetSignatureSampleRate(signature)
 		if ok {
 			setMetric(root, deprecatedRateKey, rate)
