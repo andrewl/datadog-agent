@@ -7,6 +7,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/config/remote/service"
 	"github.com/DataDog/datadog-agent/pkg/proto/pbgo"
 	"github.com/DataDog/datadog-agent/pkg/trace/config"
+	"github.com/DataDog/datadog-agent/pkg/trace/metrics"
 	"github.com/DataDog/datadog-agent/pkg/trace/pb"
 	"github.com/DataDog/datadog-agent/pkg/trace/watchdog"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -26,7 +27,7 @@ type RemoteRates struct {
 }
 
 func newRemoteRates(conf *config.AgentConfig) *RemoteRates {
-	if !conf.EnabledRemoteRates {
+	if !conf.RemoteRates {
 		return nil
 	}
 
@@ -37,18 +38,18 @@ func newRemoteRates(conf *config.AgentConfig) *RemoteRates {
 		stopped: make(chan struct{}),
 	}
 
-	if err := service.NewGRPCSubscriber(pbgo.Product_APM_SAMPLING, remoteRates.subscriberCallback()); err != nil {
+	err := service.NewGRPCSubscriber(
+		pbgo.Product_APM_SAMPLING,
+		func(config *pbgo.ConfigResponse) error {
+			log.Infof("fetched config version %d from remote config management", config.DirectoryTargets.Version)
+			return remoteRates.loadNewConfig(config)
+		},
+	)
+	if err != nil {
 		log.Errorf("Error when subscribing to remote config management %v", err)
 		return nil
 	}
 	return remoteRates
-}
-
-func (r *RemoteRates) subscriberCallback() func(config *pbgo.ConfigResponse) error {
-	return func(config *pbgo.ConfigResponse) error {
-		log.Infof("Fetched config version %d from remote config management", config.DirectoryTargets.Version)
-		return r.loadNewConfig(config)
-	}
 }
 
 func (r *RemoteRates) loadNewConfig(config *pbgo.ConfigResponse) error {
@@ -110,8 +111,7 @@ func (r *RemoteRates) Start() {
 			case <-adjustTicker.C:
 				r.AdjustScoring()
 			case <-statsTicker.C:
-				// todo:raphael report stats
-				//r.report()
+				r.report()
 			case <-r.exit:
 				close(r.stopped)
 				return
@@ -215,4 +215,11 @@ func (r *RemoteRates) GetAllSignatureSampleRates() map[Signature]float64 {
 		res[sig] = s.GetSignatureSampleRate(sig)
 	}
 	return res
+}
+
+func (r *RemoteRates) report() {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	metrics.Gauge("datadog.trace_agent.remote.samplers", float64(len(r.samplers)), nil, 1)
+	metrics.Gauge("datadog.trace_agent.remote.sig_targets", float64(len(r.tpsTargets)), nil, 1)
 }

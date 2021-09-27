@@ -35,15 +35,20 @@ const (
 	priorityLocalRateThresholdTo1 = 0.3
 )
 
-// PrioritySampler is the main component of the sampling logic
+// PrioritySampler computes priority rates per env, service to apply in a feedback loop with trace-agent clients.
+// Computed rates are sent in http responses to trace-agent. The rates are continuously adjusted in function
+// of the received traffic to match a targetTPS (target traces per second).
+// In order of priority, the sampler will match a targetTPS set remotely (remoteRates) and then the local targetTPS.
 type PrioritySampler struct {
-	// localRates and remoteRates readjust sampling rates to match a target
-	// given the received traffic.
 	// localRates targetTPS is defined locally on the agent
+	// This sampler tries to get the received number of sampled trace chunks/s to match its targetTPS.
 	localRates *Sampler
-	// remoteRates targetTPS is set remotely
+	// remoteRates targetTPS is set remotely and distributed by remote configurations.
+	// One target is defined per combination of env, service and it applies only to root spans.
 	remoteRates *RemoteRates
 
+	// rateByService contains the sampling rates in % to communicate with trace-agent clients.
+	// This struct is shared with the agent API which sends the rates in http responses to spans post requests
 	rateByService *RateByService
 	catalog       *serviceKeyCatalog
 	exit          chan struct{}
@@ -132,16 +137,17 @@ func (s *PrioritySampler) Sample(trace pb.Trace, root *pb.Span, env string, clie
 	return sampled
 }
 
+// CountSignature counts all chunks received with local chunk root signature.
 func (s *PrioritySampler) CountSignature(root *pb.Span, signature Signature) {
 	s.localRates.Backend.CountSignature(signature)
 
 	// remoteRates only considers root spans
-	if s.remoteRates == nil || root.ParentID != 0 {
-		return
+	if s.remoteRates != nil && root.ParentID == 0 {
+		s.remoteRates.CountSignature(signature)
 	}
-	s.remoteRates.CountSignature(signature)
 }
 
+// CountSampled counts sampled chunks with local chunk root signature.
 func (s *PrioritySampler) CountSampled(root *pb.Span, clientDroppedP0s bool, signature Signature, rate float64) {
 	s.localRates.Backend.CountSample()
 	// adjust sig score with the expected P0 count for that sig
@@ -153,14 +159,13 @@ func (s *PrioritySampler) CountSampled(root *pb.Span, clientDroppedP0s bool, sig
 	}
 
 	// remoteRates only considers root spans
-	if s.remoteRates == nil || root.ParentID != 0 {
-		return
-	}
-	s.remoteRates.CountSample(signature)
-	if clientDroppedP0s && rate > 0 && rate < 1 {
-		// removing 1 to not count twice the P1 chunk
-		weight := 1/rate - 1
-		s.remoteRates.CountWeightedSig(signature, weight)
+	if s.remoteRates != nil && root.ParentID == 0 {
+		s.remoteRates.CountSample(signature)
+		if clientDroppedP0s && rate > 0 && rate < 1 {
+			// removing 1 to not count twice the P1 chunk
+			weight := 1/rate - 1
+			s.remoteRates.CountWeightedSig(signature, weight)
+		}
 	}
 }
 

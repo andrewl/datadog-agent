@@ -15,7 +15,7 @@ func TestRemoteConfInit(t *testing.T) {
 	// disabled by default
 	assert.Nil(newRemoteRates(&config.AgentConfig{}))
 	// subscription to subscriber fails
-	assert.Nil(newRemoteRates(&config.AgentConfig{EnabledRemoteRates: true}))
+	assert.Nil(newRemoteRates(&config.AgentConfig{RemoteRates: true}))
 	// todo:raphael mock grpc server
 }
 
@@ -40,13 +40,14 @@ func TestRemoteTPSUpdate(t *testing.T) {
 
 	type sampler struct {
 		service   string
+		env       string
 		targetTPS float64
 	}
 
 	var testSteps = []struct {
 		name             string
 		ratesToApply     pb.RemoteRates
-		countServices    []string
+		countServices    []ServiceSignature
 		expectedSamplers []sampler
 	}{
 		{
@@ -54,11 +55,12 @@ func TestRemoteTPSUpdate(t *testing.T) {
 			ratesToApply: pb.RemoteRates{
 				Rates: []pb.Rate{
 					{
-						Service: "willBeRemoved1",
+						Service: "willBeRemoved",
 						Rate:    3.2,
 					},
 					{
-						Service: "willBeRemoved2",
+						Service: "willBeRemoved",
+						Env:     "env2",
 						Rate:    33,
 					},
 					{
@@ -70,41 +72,51 @@ func TestRemoteTPSUpdate(t *testing.T) {
 		},
 		{
 			name: "enable a sampler after counting a matching service",
-			countServices: []string{
-				"willBeRemoved1",
+			countServices: []ServiceSignature{
+				{
+					Name: "willBeRemoved",
+				},
 			},
 			expectedSamplers: []sampler{
 				{
-					service:   "willBeRemoved1",
+					service:   "willBeRemoved",
 					targetTPS: 3.2,
 				},
 			},
 		},
 		{
 			name: "nothing happens when counting a service not set remotely",
-			countServices: []string{
-				"no remote tps",
+			countServices: []ServiceSignature{
+				{
+					Name: "no remote tps",
+				},
 			},
 			expectedSamplers: []sampler{
 				{
-					service:   "willBeRemoved1",
+					service:   "willBeRemoved",
 					targetTPS: 3.2,
 				},
 			},
 		},
 		{
 			name: "add 2 more samplers",
-			countServices: []string{
-				"keep",
-				"willBeRemoved2",
+			countServices: []ServiceSignature{
+				{
+					Name: "keep",
+				},
+				{
+					Name: "willBeRemoved",
+					Env:  "env2",
+				},
 			},
 			expectedSamplers: []sampler{
 				{
-					service:   "willBeRemoved1",
+					service:   "willBeRemoved",
 					targetTPS: 3.2,
 				},
 				{
-					service:   "willBeRemoved2",
+					service:   "willBeRemoved",
+					env:       "env2",
 					targetTPS: 33,
 				},
 				{
@@ -138,13 +150,13 @@ func TestRemoteTPSUpdate(t *testing.T) {
 			r.loadNewConfig(configGenerator(step.ratesToApply))
 		}
 		for _, s := range step.countServices {
-			r.CountSignature(ServiceSignature{Name: s}.Hash())
+			r.CountSignature(s.Hash())
 		}
 
 		assert.Len(r.samplers, len(step.expectedSamplers))
 
 		for _, expectedS := range step.expectedSamplers {
-			s, ok := r.samplers[ServiceSignature{Name: expectedS.service}.Hash()]
+			s, ok := r.samplers[ServiceSignature{Name: expectedS.service, Env: expectedS.env}.Hash()]
 			require.True(t, ok)
 			assert.Equal(expectedS.targetTPS, s.targetTPS.Load())
 		}

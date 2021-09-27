@@ -10,6 +10,8 @@ message Rate {
     double rate = 3; 
 }
 
+// RemoteRates is a list of rates per service, env provided by remote configurations
+// to target in prioritysampler feedback loop.
 message RemoteRates {
     repeated Rate rates = 1 [(gogoproto.nullable) = false];
 }
