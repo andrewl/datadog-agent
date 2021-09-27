@@ -14,12 +14,16 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
-// RemoteRates sharded by signature. Allowing an independent feedback
-// loop per signature. RemoteRates adjusts sampling rates communicated
-// to the agent based on the observed traffic. It targets a TPS configured
-// remotely.
+// RemoteRates computes rates per (env, service) to apply in trace-agent clients.
+// The rates are adjusted to match a targetTPS per (env, service) received
+// from remote configurations. RemoteRates listens for new remote configurations
+// with a grpc subscriber. On reception, new tps targets replace the previous ones.
 type RemoteRates struct {
-	samplers   map[Signature]*Sampler
+	// samplers contains active sampler adjusting rates to match latest tps targets
+	// available. A sampler is added only if a span matching the signature is seen.
+	samplers map[Signature]*Sampler
+	// tpsTargets contains the latest tps targets available per (env, service)
+	// this map may include signatures (env, service) not seen by this agent.
 	tpsTargets map[Signature]float64
 	mu         sync.RWMutex // protects concurrent access to samplers and tpsTargets
 
