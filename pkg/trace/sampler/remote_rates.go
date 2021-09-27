@@ -13,7 +13,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
-// RemoteRates sharded by signature. Allowing an independant feedback
+// RemoteRates sharded by signature. Allowing an independent feedback
 // loop per signature. RemoteRates adjusts sampling rates communicated
 // to the agent based on the observed traffic. It targets a TPS configured
 // remotely.
