@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	model "github.com/DataDog/agent-payload/process"
-	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/http"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -51,13 +50,11 @@ func GetUnmarshaler(ctype string) Unmarshaler {
 
 func modelConnections(conns *network.Connections) *model.Connections {
 	agentConns := make([]*model.Connection, len(conns.Conns))
-	domainSet := make(map[string]int)
 	routeIndex := make(map[string]RouteIdx)
 	httpIndex := FormatHTTPStats(conns.HTTP)
 	httpMatches := make(map[http.Key]struct{}, len(httpIndex))
 	ipc := make(ipCache, len(conns.Conns)/2)
-
-	dnsWithQueryType := config.Datadog.GetBool("network_config.enable_dns_by_querytype")
+	dnsFormatter := newDNSFormatter(conns, ipc)
 
 	for i, conn := range conns.Conns {
 		httpKey := httpKeyFromConn(conn)
@@ -66,7 +63,7 @@ func modelConnections(conns *network.Connections) *model.Connections {
 			httpMatches[httpKey] = struct{}{}
 		}
 
-		agentConns[i] = FormatConnection(conn, domainSet, routeIndex, httpAggregations, dnsWithQueryType, ipc)
+		agentConns[i] = FormatConnection(conn, routeIndex, httpAggregations, dnsFormatter, ipc)
 	}
 
 	if orphans := len(httpIndex) - len(httpMatches); orphans > 0 {
@@ -76,11 +73,6 @@ func modelConnections(conns *network.Connections) *model.Connections {
 		)
 	}
 
-	domains := make([]string, len(domainSet))
-	for k, v := range domainSet {
-		domains[v] = k
-	}
-
 	routes := make([]*model.Route, len(routeIndex))
 	for _, v := range routeIndex {
 		routes[v.Idx] = &v.Route
@@ -88,8 +80,8 @@ func modelConnections(conns *network.Connections) *model.Connections {
 
 	payload := connsPool.Get().(*model.Connections)
 	payload.Conns = agentConns
-	payload.Domains = domains
-	payload.Dns = FormatDNS(conns.DNS, ipc)
+	payload.Domains = dnsFormatter.Domains()
+	payload.Dns = dnsFormatter.DNS()
 	payload.ConnTelemetry = FormatConnTelemetry(conns.ConnTelemetry)
 	payload.CompilationTelemetryByAsset = FormatCompilationTelemetry(conns.CompilationTelemetryByAsset)
 	payload.Routes = routes
