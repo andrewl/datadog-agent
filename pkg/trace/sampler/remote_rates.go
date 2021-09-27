@@ -37,7 +37,7 @@ func newRemoteRates(conf *config.AgentConfig) *RemoteRates {
 		exit:     make(chan struct{}),
 		stopped:  make(chan struct{}),
 	}
-	close, err := service.NewGRPCSubscriber(pbgo.Product_APM_SAMPLING, r.loadNewConfig)
+	close, err := service.NewGRPCSubscriber(pbgo.Product_APM_SAMPLING, remoteRates.loadNewConfig)
 	if err != nil {
 		log.Errorf("Error when subscribing to remote config management %v", err)
 		return nil
@@ -46,10 +46,10 @@ func newRemoteRates(conf *config.AgentConfig) *RemoteRates {
 	return remoteRates
 }
 
-func (r *RemoteRates) loadNewConfig(config *pbgo.ConfigResponse) error {
-	log.Debugf("fetched config version %d from remote config management", config.DirectoryTargets.Version)
+func (r *RemoteRates) loadNewConfig(new *pbgo.ConfigResponse) error {
+	log.Debugf("fetched config version %d from remote config management", new.ConfigDelegatedTargetVersion)
 	tpsTargets := make(map[Signature]float64, len(r.tpsTargets))
-	for _, targetFile := range config.TargetFiles {
+	for _, targetFile := range new.TargetFiles {
 		var new pb.APMSampling
 		_, err := new.UnmarshalMsg(targetFile.Raw)
 		if err != nil {
