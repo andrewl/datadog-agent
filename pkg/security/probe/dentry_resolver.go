@@ -430,8 +430,10 @@ func (dr *DentryResolver) ResolveFromMap(mountID uint32, inode uint64, pathID ui
 			filename = "/" + cacheEntry.Name + filename
 		}
 
-		keys = append(keys, cacheKey)
-		entries = append(entries, cacheEntry)
+		if cache {
+			keys = append(keys, cacheKey)
+			entries = append(entries, cacheEntry)
+		}
 
 		if path.Parent.Inode == 0 {
 			break
@@ -517,16 +519,15 @@ func (dr *DentryResolver) cacheEntries(keys []PathKey, entries []PathEntry) {
 	var cacheEntry PathEntry
 
 	for i, k := range keys {
+		if i >= len(entries) {
+			break
+		}
+
 		if IsFakeInode(k.Inode) {
 			continue
 		}
 
-		if len(entries) > i {
-			cacheEntry = entries[i]
-		} else {
-			continue
-		}
-
+		cacheEntry = entries[i]
 		if len(keys) > i+1 {
 			cacheEntry.Parent = keys[i+1]
 		}
@@ -605,9 +606,8 @@ func (dr *DentryResolver) ResolveFromERPC(mountID uint32, inode uint64, pathID u
 		// keys to be cached
 		if cache {
 			keys = append(keys, cacheKey)
+			entries = append(entries, PathEntry{Name: segment})
 		}
-
-		entries = append(entries, PathEntry{Name: segment})
 	}
 
 	if len(filename) == 0 {
