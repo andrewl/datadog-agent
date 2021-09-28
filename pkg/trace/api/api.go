@@ -489,7 +489,7 @@ func (r *HTTPReceiver) handleConfig(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if cfg == nil {
-		// todo return http.StatusNoContent
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -498,7 +498,6 @@ func (r *HTTPReceiver) handleConfig(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	w.Write(content)
 }
 

@@ -16,6 +16,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -785,6 +786,61 @@ func TestClientComputedTopLevel(t *testing.T) {
 
 	t.Run("on", run(true))
 	t.Run("off", run(false))
+}
+
+func TestConfigEndpoint(t *testing.T) {
+	var tcs = []struct {
+		name               string
+		reqBody            string
+		expectedStatusCode int
+		enabled            bool
+		response           string
+	}{
+		{
+			name:               "disabled",
+			expectedStatusCode: http.StatusNotFound,
+			response:           "404 page not found\n",
+		},
+		{
+			name:               "bad content",
+			enabled:            true,
+			expectedStatusCode: http.StatusBadRequest,
+			response:           "unexpected end of JSON input\n",
+		},
+		{
+			name:               "no new content",
+			reqBody:            `{"Product":1}`,
+			enabled:            true,
+			expectedStatusCode: http.StatusNoContent,
+			response:           "",
+		},
+		{
+			name:               "no new content",
+			reqBody:            `{"Product":1}`,
+			enabled:            true,
+			expectedStatusCode: http.StatusNoContent,
+			response:           "",
+		},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			assert := assert.New(t)
+			conf := newTestReceiverConfig()
+			conf.RemoteDebugging = tc.enabled
+			rcv := newTestReceiverFromConfig(conf)
+			mux := rcv.buildMux()
+			server := httptest.NewServer(mux)
+
+			req, _ := http.NewRequest("POST", server.URL+"/v0.6/config", strings.NewReader(tc.reqBody))
+			req.Header.Set("Content-Type", "application/msgpack")
+			resp, err := http.DefaultClient.Do(req)
+			assert.Nil(err)
+			body, err := ioutil.ReadAll(resp.Body)
+			assert.Nil(err)
+			assert.Equal(tc.expectedStatusCode, resp.StatusCode)
+			assert.Equal(tc.response, string(body))
+		})
+	}
 }
 
 func TestClientDropP0s(t *testing.T) {
