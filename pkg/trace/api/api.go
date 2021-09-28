@@ -468,19 +468,17 @@ func (r *HTTPReceiver) handleConfig(w http.ResponseWriter, req *http.Request) {
 		metrics.Count("datadog.trace_agent.receiver.config", 1, tags, 1)
 	}()
 
-	tags = append(tags, fmt.Sprintf("product:%s", product))
-
 	buf := getBuffer()
 	defer putBuffer(buf)
 	_, err := io.Copy(buf, req.Body)
 	var configsRequest pbgo.GetConfigsRequest
-	err := json.Unmarshal(buf, &configsRequest)
+	err = json.Unmarshal(buf.Bytes(), &configsRequest)
 	if err != nil {
 		// todo handle err decoding request
 		return
 	}
 
-	cfg, err := r.remoteStore.Get(configsRequest)
+	cfg, err := r.remoteStore.Get(&configsRequest)
 	if err != nil {
 		statusCode = http.StatusInternalServerError
 		http.Error(w, err.Error(), statusCode)
