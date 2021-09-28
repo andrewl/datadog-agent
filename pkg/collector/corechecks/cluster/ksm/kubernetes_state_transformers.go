@@ -298,11 +298,13 @@ func cronJobLastScheduleTransformer(s aggregator.Sender, name string, metric ksm
 
 // jobCompleteTransformer sends a service check based on kube_job_complete
 func jobCompleteTransformer(s aggregator.Sender, name string, metric ksmstore.DDMetric, hostname string, tags []string) {
+	jobMetric(s, metric, ksmMetricPrefix+"job.completion.succeeded", hostname, tags)
 	jobServiceCheck(s, metric, metrics.ServiceCheckOK, hostname, tags)
 }
 
 // jobFailedTransformer sends a service check based on kube_job_failed
 func jobFailedTransformer(s aggregator.Sender, name string, metric ksmstore.DDMetric, hostname string, tags []string) {
+	jobMetric(s, metric, ksmMetricPrefix+"job.completion.failed", hostname, tags)
 	jobServiceCheck(s, metric, metrics.ServiceCheckCritical, hostname, tags)
 }
 
