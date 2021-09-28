@@ -131,6 +131,9 @@ type AgentConfig struct {
 
 	// OTLPReceiver holds the configuration for OpenTelemetry receiver.
 	OTLPReceiver *OTLP
+
+	// RemoteDebugging reports whether remote debugging is enabled.
+	RemoteDebugging bool
 }
 
 // Tag represents a key/value pair.

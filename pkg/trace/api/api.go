@@ -120,6 +120,9 @@ func (r *HTTPReceiver) buildMux() *http.ServeMux {
 	hash, infoHandler := r.makeInfoHandler()
 	r.attachDebugHandlers(mux)
 	for _, e := range endpoints {
+		if e.ConfigEnabled != nil && e.ConfigEnabled(r.conf) {
+			continue
+		}
 		mux.Handle(e.Pattern, replyWithVersion(hash, e.Handler(r)))
 	}
 	mux.HandleFunc("/info", infoHandler)
