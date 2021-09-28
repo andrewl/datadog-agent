@@ -71,13 +71,13 @@ type HTTPReceiver struct {
 	Stats       *info.ReceiverStats
 	RateLimiter *rateLimiter
 
-	out            chan *Payload
-	conf           *config.AgentConfig
-	dynConf        *sampler.DynamicConfig
-	server         *http.Server
-	statsProcessor StatsProcessor
-	appsecHandler  http.Handler
-	remoteStore    *config.Store
+	out              chan *Payload
+	conf             *config.AgentConfig
+	dynConf          *sampler.DynamicConfig
+	server           *http.Server
+	statsProcessor   StatsProcessor
+	appsecHandler    http.Handler
+	configSubscriber *config.Subscriber
 
 	debug               bool
 	rateLimiterResponse int // HTTP status code when refusing
@@ -100,12 +100,12 @@ func NewHTTPReceiver(conf *config.AgentConfig, dynConf *sampler.DynamicConfig, o
 		Stats:       info.NewReceiverStats(),
 		RateLimiter: newRateLimiter(),
 
-		out:            out,
-		statsProcessor: statsProcessor,
-		remoteStore:    config.NewStore(),
-		conf:           conf,
-		dynConf:        dynConf,
-		appsecHandler:  appsecHandler,
+		out:              out,
+		statsProcessor:   statsProcessor,
+		configSubscriber: config.NewSubscriber(),
+		conf:             conf,
+		dynConf:          dynConf,
+		appsecHandler:    appsecHandler,
 
 		debug:               strings.ToLower(conf.LogLevel) == "debug",
 		rateLimiterResponse: rateLimiterResponse,
@@ -471,17 +471,25 @@ func (r *HTTPReceiver) handleConfig(w http.ResponseWriter, req *http.Request) {
 	buf := getBuffer()
 	defer putBuffer(buf)
 	_, err := io.Copy(buf, req.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+	}
 	var configsRequest pbgo.GetConfigsRequest
 	err = json.Unmarshal(buf.Bytes(), &configsRequest)
 	if err != nil {
-		// todo handle err decoding request
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	cfg, err := r.remoteStore.Get(&configsRequest)
+	cfg, err := r.configSubscriber.Get(&configsRequest)
 	if err != nil {
 		statusCode = http.StatusInternalServerError
 		http.Error(w, err.Error(), statusCode)
+		return
+	}
+	if cfg == nil {
+		// todo return http.StatusNoContent
 		return
 	}
 

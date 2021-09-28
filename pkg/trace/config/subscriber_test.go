@@ -163,7 +163,7 @@ func TestGetUpload(t *testing.T) {
 			},
 		},
 	}
-	s := NewStore()
+	s := NewSubscriber()
 	for _, step := range testSteps {
 		t.Log(step.name)
 		if step.remoteUpdate != nil {
