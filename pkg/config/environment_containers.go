@@ -123,7 +123,7 @@ func detectContainerd(features FeatureMap) {
 		// Containerd support was historically meant for K8S
 		// However, containerd is now used standalone elsewhere.
 		// TODO: Consider having a dedicated setting for containerd standalone
-		if IsKubernetes() {
+		if IsKubernetes() && runtime.GOOS != "windows" {
 			features[Cri] = struct{}{}
 		}
 
