@@ -491,7 +491,7 @@ func (r *HTTPReceiver) handleTraces(v Version, w http.ResponseWriter, req *http.
 	}
 	if n, ok := r.replyOK(v, w); ok {
 		tags := append(ts.AsTags(), "endpoint:traces_"+string(v))
-		metrics.Histogram("datadog.trace_agent.receiver.rate_response_bytes", float64(n), tags, 1)
+		metrics.Histogram("datadog.trace_agent.receiver.serve_traces_bytes", float64(n), tags, 1)
 	}
 
 	atomic.AddInt64(&ts.TracesReceived, int64(len(traces)))
