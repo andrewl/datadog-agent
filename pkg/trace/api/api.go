@@ -32,6 +32,7 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/appsec"
 	mainconfig "github.com/DataDog/datadog-agent/pkg/config"
+	"github.com/DataDog/datadog-agent/pkg/proto/pbgo"
 	"github.com/DataDog/datadog-agent/pkg/tagger"
 	"github.com/DataDog/datadog-agent/pkg/tagger/collectors"
 	"github.com/DataDog/datadog-agent/pkg/trace/api/apiutil"
@@ -466,16 +467,20 @@ func (r *HTTPReceiver) handleConfig(w http.ResponseWriter, req *http.Request) {
 
 	tags = append(tags, fmt.Sprintf("product:%s", product))
 
-	// todo: version handling, quick response when no new version available
-	cfg, ok, err := r.remoteStore.Get(0, product)
-	if !ok {
-		if err != nil {
-			statusCode = http.StatusInternalServerError
-			http.Error(w, err.Error(), statusCode)
-			return
-		}
-		statusCode = http.StatusCreated
-		w.WriteHeader(statusCode)
+	buf := getBuffer()
+	defer putBuffer(buf)
+	_, err := io.Copy(buf, req.Body)
+	var configsRequest pbgo.GetConfigsRequest
+	err := json.Unmarshal(buf, &configsRequest)
+	if err != nil {
+		// todo handle err decoding request
+		return
+	}
+
+	cfg, err := r.remoteStore.Get(configsRequest)
+	if err != nil {
+		statusCode = http.StatusInternalServerError
+		http.Error(w, err.Error(), statusCode)
 		return
 	}
 

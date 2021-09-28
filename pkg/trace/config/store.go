@@ -98,6 +98,9 @@ func topMetaCopy(old *pbgo.TopMeta) *pbgo.TopMeta {
 }
 
 func targetFilesCopy(old []*pbgo.File) []*pbgo.File {
+	if old == nil {
+		return nil
+	}
 	new := make([]*pbgo.File, 0, len(old))
 	for _, f := range old {
 		rawCopy := make([]byte, len(f.Raw))
